@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<title>Blue Lock: Пробуждение</title>
+<title>Blue Lock: Awakening</title>
 <style>
 body{
     margin:0;
@@ -21,6 +21,8 @@ body{
     justify-content:center;
     align-items:center;
     text-align:center;
+    background:black;
+    z-index:10;
 }
 
 button{
@@ -40,16 +42,13 @@ button:hover{
 
 #result{
     margin-top:20px;
-    font-size:26px;
+    font-size:24px;
     font-weight:bold;
 }
 
-.common{color:lightgray;}
-.uncommon{color:lime;}
-.rare{color:deepskyblue;}
-.epic{color:violet;}
-.legendary{color:gold;}
-.world{color:red; text-shadow:0 0 20px red;}
+#gameCanvas{
+    display:block;
+}
 </style>
 </head>
 <body>
@@ -57,7 +56,6 @@ button:hover{
 <!-- ВСТУПЛЕНИЕ -->
 <div id="intro" class="screen">
     <h1>Ты вошёл в Blue Lock</h1>
-    <p>Здесь нет команды. Есть только эго.</p>
     <p>У тебя один шанс.</p>
     <button onclick="startGacha()">Пробудиться</button>
 </div>
@@ -71,42 +69,29 @@ button:hover{
     <div id="result"></div>
 </div>
 
+<!-- THREE JS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
 <script>
+/* ---------------- GACHA ---------------- */
 
 let normalSpins = 10;
 let luckySpins = 1;
+let awakening = null;
 
-/* ОБЫЧНЫЕ ШАНСЫ */
 const normalTable = [
-{rarity:"Обычный", chance:50, class:"common",
- rewards:["Подражатель","Нет","Скорость"]},
-
-{rarity:"Необычный", chance:25, class:"uncommon",
- rewards:["Дриблинг","Цепь"]},
-
-{rarity:"Редкий", chance:10, class:"rare",
- rewards:["Поток Змеи","Поток Хамелеона"]},
-
-{rarity:"Эпик", chance:5, class:"epic",
- rewards:["Поток Пантеры"]},
-
-{rarity:"Легендарный", chance:2.5, class:"legendary",
- rewards:["Поток Гения","Поток Императора","Поток Пазлов","Поток Младшего"]},
-
-{rarity:"Мировой класс", chance:1, class:"world",
- rewards:["Божественная скорость","Поток Цантора"]}
+{rarity:"Обычный", chance:50, rewards:["Подражатель","Нет","Скорость"]},
+{rarity:"Необычный", chance:25, rewards:["Дриблинг","Цепь"]},
+{rarity:"Редкий", chance:10, rewards:["Поток Змеи","Поток Хамелеона"]},
+{rarity:"Эпик", chance:5, rewards:["Поток Пантеры"]},
+{rarity:"Легендарный", chance:2.5, rewards:["Поток Гения","Поток Императора","Поток Пазлов","Поток Младшего"]},
+{rarity:"Мировой класс", chance:1, rewards:["Божественная скорость","Поток Цантора"]}
 ];
 
-/* УДАЧЛИВЫЙ СПИН */
 const luckyTable = [
-{rarity:"Эпик", chance:65, class:"epic",
- rewards:["Поток Пантеры"]},
-
-{rarity:"Легендарный", chance:25, class:"legendary",
- rewards:["Поток Гения","Поток Императора","Поток Пазлов","Поток Младшего"]},
-
-{rarity:"Мировой класс", chance:10, class:"world",
- rewards:["Божественная скорость","Поток Цантора"]}
+{rarity:"Эпик", chance:65, rewards:["Поток Пантеры"]},
+{rarity:"Легендарный", chance:25, rewards:["Поток Гения","Поток Императора","Поток Пазлов","Поток Младшего"]},
+{rarity:"Мировой класс", chance:10, rewards:["Божественная скорость","Поток Цантора"]}
 ];
 
 function startGacha(){
@@ -117,61 +102,144 @@ function startGacha(){
 
 function updateInfo(){
     document.getElementById("spinInfo").innerText =
-    "Обычные спины: "+normalSpins+" | Удачливые спины: "+luckySpins;
+    "Обычные: "+normalSpins+" | Удачливые: "+luckySpins;
 }
 
 function rollNormal(){
-    if(normalSpins<=0){
-        alert("Нет обычных спинов!");
-        return;
-    }
+    if(normalSpins<=0) return;
     normalSpins--;
     roll(normalTable);
 }
 
 function rollLucky(){
-    if(luckySpins<=0){
-        alert("Нет удачливых спинов!");
-        return;
-    }
+    if(luckySpins<=0) return;
     luckySpins--;
     roll(luckyTable);
 }
 
 function roll(table){
-
     let rand = Math.random()*100;
     let sum = 0;
 
     for(let item of table){
         sum += item.chance;
         if(rand <= sum){
-
             let reward = item.rewards[
                 Math.floor(Math.random()*item.rewards.length)
             ];
+            awakening = reward;
+            document.getElementById("result").innerText =
+            "🔥 "+item.rarity+" — "+reward+
+            "\n\nНажми чтобы начать обучение";
 
-            showResult(item, reward);
+            setTimeout(()=>{
+                startTraining();
+            },2000);
 
-            if(item.rarity==="Мировой класс"){
-                document.body.style.background="darkred";
-            }
-
-            localStorage.setItem("awakening", reward);
             break;
         }
     }
-
     updateInfo();
 }
 
-function showResult(item, reward){
-    let result = document.getElementById("result");
-    result.className = item.class;
-    result.innerText = "🔥 "+item.rarity+" — "+reward;
+/* ---------------- 3D ОБУЧЕНИЕ ---------------- */
+
+let scene, camera, renderer;
+let player, ball, goal;
+let keys = {};
+
+function startTraining(){
+    document.getElementById("gacha").style.display="none";
+
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x101820);
+
+    camera = new THREE.PerspectiveCamera(
+        75,
+        window.innerWidth/window.innerHeight,
+        0.1,
+        1000
+    );
+
+    renderer = new THREE.WebGLRenderer({antialias:true});
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    // Свет
+    const light = new THREE.DirectionalLight(0xffffff,1);
+    light.position.set(10,20,10);
+    scene.add(light);
+
+    const ambient = new THREE.AmbientLight(0x404040);
+    scene.add(ambient);
+
+    // Поле
+    const fieldGeo = new THREE.PlaneGeometry(60,40);
+    const fieldMat = new THREE.MeshStandardMaterial({color:0x0b6623});
+    const field = new THREE.Mesh(fieldGeo, fieldMat);
+    field.rotation.x = -Math.PI/2;
+    scene.add(field);
+
+    // Игрок
+    const playerGeo = new THREE.BoxGeometry(1,2,1);
+    const playerMat = new THREE.MeshStandardMaterial({color:0x00aaff});
+    player = new THREE.Mesh(playerGeo, playerMat);
+    player.position.y = 1;
+    scene.add(player);
+
+    // Мяч
+    const ballGeo = new THREE.SphereGeometry(0.5,32,32);
+    const ballMat = new THREE.MeshStandardMaterial({color:0xffffff});
+    ball = new THREE.Mesh(ballGeo, ballMat);
+    ball.position.set(0,0.5,-5);
+    scene.add(ball);
+
+    // Ворота
+    const goalGeo = new THREE.BoxGeometry(6,3,1);
+    const goalMat = new THREE.MeshStandardMaterial({color:0xffffff});
+    goal = new THREE.Mesh(goalGeo, goalMat);
+    goal.position.set(0,1.5,-20);
+    scene.add(goal);
+
+    camera.position.set(0,5,10);
+
+    document.addEventListener("keydown", e=>keys[e.key]=true);
+    document.addEventListener("keyup", e=>keys[e.key]=false);
+
+    animate();
+}
+
+function animate(){
+    requestAnimationFrame(animate);
+
+    // Управление
+    if(keys["w"]) player.position.z -= 0.2;
+    if(keys["s"]) player.position.z += 0.2;
+    if(keys["a"]) player.position.x -= 0.2;
+    if(keys["d"]) player.position.x += 0.2;
+
+    // Камера следует
+    camera.position.x = player.position.x;
+    camera.position.z = player.position.z + 10;
+    camera.lookAt(player.position);
+
+    // Удар
+    if(keys[" "]){
+        let distance = player.position.distanceTo(ball.position);
+        if(distance < 2){
+            ball.position.z -= 1;
+        }
+    }
+
+    // Проверка гола
+    if(ball.position.z < -19){
+        alert("⚽ ГОЛ!\nОбучение завершено.\nТвоё пробуждение: "+awakening);
+        location.reload();
+    }
+
+    renderer.render(scene,camera);
 }
 
 </script>
-
 </body>
 </html>

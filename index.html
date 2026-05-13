@@ -40,7 +40,7 @@ button:hover{
 
 #result{
     margin-top:20px;
-    font-size:24px;
+    font-size:26px;
     font-weight:bold;
 }
 
@@ -76,7 +76,8 @@ button:hover{
 let normalSpins = 10;
 let luckySpins = 1;
 
-const gachaTable = [
+/* ОБЫЧНЫЕ ШАНСЫ */
+const normalTable = [
 {rarity:"Обычный", chance:50, class:"common",
  rewards:["Подражатель","Нет","Скорость"]},
 
@@ -93,6 +94,18 @@ const gachaTable = [
  rewards:["Поток Гения","Поток Императора","Поток Пазлов","Поток Младшего"]},
 
 {rarity:"Мировой класс", chance:1, class:"world",
+ rewards:["Божественная скорость","Поток Цантора"]}
+];
+
+/* УДАЧЛИВЫЙ СПИН */
+const luckyTable = [
+{rarity:"Эпик", chance:65, class:"epic",
+ rewards:["Поток Пантеры"]},
+
+{rarity:"Легендарный", chance:25, class:"legendary",
+ rewards:["Поток Гения","Поток Императора","Поток Пазлов","Поток Младшего"]},
+
+{rarity:"Мировой класс", chance:10, class:"world",
  rewards:["Божественная скорость","Поток Цантора"]}
 ];
 
@@ -113,7 +126,7 @@ function rollNormal(){
         return;
     }
     normalSpins--;
-    roll(gachaTable);
+    roll(normalTable);
 }
 
 function rollLucky(){
@@ -122,14 +135,6 @@ function rollLucky(){
         return;
     }
     luckySpins--;
-
-    let luckyTable = gachaTable.map(item=>{
-        return{
-            ...item,
-            chance: item.rarity==="Обычный" ? 35 : item.chance*2
-        }
-    });
-
     roll(luckyTable);
 }
 

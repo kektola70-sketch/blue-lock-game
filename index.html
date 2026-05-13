@@ -5,7 +5,7 @@
 <title>Blue Lock Ultimate</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
-body{margin:0;overflow:hidden;background:black;font-family:Arial}
+body{margin:0;overflow:hidden;background:black;font-family:Arial;color:white}
 
 /* ЭКРАНЫ */
 .screen{
@@ -17,7 +17,6 @@ flex-direction:column;
 justify-content:center;
 align-items:center;
 background:black;
-color:white;
 z-index:10;
 text-align:center;
 }
@@ -29,15 +28,14 @@ font-size:18px;
 cursor:pointer;
 }
 
-/* UI */
-#ui{position:absolute;width:100%;height:100%;pointer-events:none;}
+/* UI MOBILE */
+#ui{position:absolute;width:100%;height:100%;pointer-events:none;display:none;}
 
 #joystick{
 position:absolute;
 bottom:40px;
 left:40px;
-width:120px;
-height:120px;
+width:120px;height:120px;
 background:rgba(255,255,255,0.1);
 border-radius:50%;
 pointer-events:auto;
@@ -53,8 +51,7 @@ left:30px;top:30px;
 
 #jumpBtn{
 position:absolute;
-bottom:60px;
-right:60px;
+bottom:60px;right:60px;
 width:100px;height:100px;
 border-radius:50%;
 background:rgba(0,150,255,0.7);
@@ -80,10 +77,11 @@ pointer-events:auto;
 <button onclick="rollNormal()">Обычный спин</button>
 <button onclick="rollLucky()">Удачливый спин</button>
 <h3 id="result"></h3>
+<button id="continueBtn" onclick="startGame()" style="display:none;">Продолжить</button>
 </div>
 
-<!-- UI MOBILE -->
-<div id="ui" style="display:none;">
+<!-- UI -->
+<div id="ui">
 <div id="joystick"><div id="stick"></div></div>
 <button id="jumpBtn">JUMP</button>
 </div>
@@ -91,7 +89,7 @@ pointer-events:auto;
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
 <script>
-/* ------------------ GACHA ------------------ */
+/* ---------------- GACHA ---------------- */
 
 let normalSpins=10;
 let luckySpins=1;
@@ -119,7 +117,7 @@ updateSpins();
 }
 
 function updateSpins(){
-spins.innerText="Обычные:"+normalSpins+" | Удачливые:"+luckySpins;
+spins.innerText="Обычные: "+normalSpins+" | Удачливые: "+luckySpins;
 }
 
 function rollNormal(){if(normalSpins<=0)return;normalSpins--;roll(normalTable);}
@@ -132,28 +130,36 @@ sum+=item.chance;
 if(rand<=sum){
 awakening=item.rewards[Math.floor(Math.random()*item.rewards.length)];
 result.innerText=item.rarity+" — "+awakening;
-setTimeout(startGame,2000);
+continueBtn.style.display="block";
 break;
 }}
 updateSpins();
 }
 
-/* ------------------ 3D GAME ------------------ */
+/* ---------------- 3D GAME ---------------- */
 
 let scene,camera,renderer;
 let player,ball,goal;
-let moveX=0,moveZ=0;
+let keys={},hasBall=false;
 let velocityY=0,onGround=true;
-let hasBall=false;
+let moveX=0,moveZ=0;
 
 function startGame(){
+
 gacha.style.display="none";
 ui.style.display="block";
+
+/* FIX ЧЕРНОГО ЭКРАНА */
+if(renderer){
+renderer.dispose();
+document.body.removeChild(renderer.domElement);
+}
 
 scene=new THREE.Scene();
 scene.background=new THREE.Color(0x87CEEB);
 
 camera=new THREE.PerspectiveCamera(75,innerWidth/innerHeight,0.1,1000);
+
 renderer=new THREE.WebGLRenderer({antialias:true});
 renderer.setSize(innerWidth,innerHeight);
 renderer.shadowMap.enabled=true;
@@ -217,9 +223,9 @@ document.addEventListener("keyup",e=>keys[e.key]=false);
 animate();
 }
 
-let keys={};
-
 /* ----------- JOYSTICK ----------- */
+
+let drag=false;
 
 joystick.addEventListener("touchstart",()=>drag=true);
 joystick.addEventListener("touchend",()=>{
@@ -227,7 +233,6 @@ drag=false;moveX=0;moveZ=0;
 stick.style.left="30px";stick.style.top="30px";
 });
 
-let drag=false;
 joystick.addEventListener("touchmove",(e)=>{
 if(!drag)return;
 let r=joystick.getBoundingClientRect();
@@ -241,7 +246,6 @@ stick.style.top=(y+30)+"px";
 moveX=x/40;moveZ=y/40;
 });
 
-/* Прыжок */
 jumpBtn.onclick=()=>{
 if(onGround){velocityY=0.3;onGround=false;}
 };
@@ -251,15 +255,15 @@ if(onGround){velocityY=0.3;onGround=false;}
 function animate(){
 requestAnimationFrame(animate);
 
-/* Движение */
+/* ПК */
 if(keys["w"])moveZ=-1;
 if(keys["s"])moveZ=1;
 if(keys["a"])moveX=-1;
 if(keys["d"])moveX=1;
 
+/* Движение */
 player.position.x+=moveX*0.4;
 player.position.z+=moveZ*0.4;
-
 moveX*=0.8;moveZ*=0.8;
 
 /* Гравитация */
@@ -273,18 +277,16 @@ camera.position.z=player.position.z+12;
 camera.lookAt(player.position);
 
 /* Взятие мяча */
-if(player.position.distanceTo(ball.position)<2){
-hasBall=true;
-}
+if(player.position.distanceTo(ball.position)<2){hasBall=true;}
 if(hasBall){
 ball.position.x=player.position.x;
 ball.position.z=player.position.z-1;
 }
 
 /* Удар */
-if(keys["f"] && hasBall){
+if(keys["f"]&&hasBall){
 hasBall=false;
-ball.position.z-=5;
+ball.position.z-=8;
 }
 
 /* Гол */
@@ -296,7 +298,6 @@ hasBall=false;
 
 renderer.render(scene,camera);
 }
-
 </script>
 </body>
 </html>

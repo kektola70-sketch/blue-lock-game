@@ -2,32 +2,11 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<title>Blue Lock Fixed</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Blue Lock Mobile Stable</title>
 <style>
-body{margin:0;overflow:hidden;background:black;font-family:Arial;color:white}
+body{margin:0;overflow:hidden;background:black}
 canvas{display:block}
-
-/* ЭКРАНЫ */
-.screen{
-position:fixed;
-width:100%;
-height:100%;
-display:flex;
-flex-direction:column;
-justify-content:center;
-align-items:center;
-background:black;
-z-index:20;
-text-align:center;
-}
-
-button{
-padding:12px 25px;
-margin:10px;
-font-size:18px;
-cursor:pointer;
-}
 
 /* UI */
 #ui{
@@ -35,8 +14,6 @@ position:fixed;
 width:100%;
 height:100%;
 pointer-events:none;
-display:none;
-z-index:15;
 }
 
 #joystick{
@@ -47,7 +24,6 @@ width:120px;height:120px;
 background:rgba(255,255,255,0.15);
 border-radius:50%;
 pointer-events:auto;
-touch-action:none;
 }
 
 #stick{
@@ -60,7 +36,7 @@ left:30px;top:30px;
 #jumpBtn{
 position:absolute;
 bottom:60px;right:60px;
-width:100px;height:100px;
+width:90px;height:90px;
 border-radius:50%;
 background:rgba(0,150,255,0.8);
 color:white;font-size:18px;
@@ -71,237 +47,146 @@ pointer-events:auto;
 </head>
 <body>
 
-<!-- INTRO -->
-<div id="intro" class="screen">
-<h1>BLUE LOCK</h1>
-<p>У тебя один шанс.</p>
-<button onclick="startGacha()">Пробудиться</button>
-</div>
-
-<!-- GACHA -->
-<div id="gacha" class="screen" style="display:none;">
-<h2>Пробуждение</h2>
-<p id="spins"></p>
-<button onclick="rollNormal()">Обычный спин</button>
-<button onclick="rollLucky()">Удачливый спин</button>
-<h3 id="result"></h3>
-<button id="continueBtn" style="display:none;" onclick="startGame()">Продолжить</button>
-</div>
-
-<!-- UI -->
 <div id="ui">
 <div id="joystick"><div id="stick"></div></div>
 <button id="jumpBtn">JUMP</button>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.150.1/build/three.min.js"></script>
 
 <script>
-/* ---------------- GACHA ---------------- */
 
-let normalSpins=10,luckySpins=1,awakening=null;
-
-const normalTable=[
-{rarity:"Обычный",chance:50,rewards:["Подражатель","Скорость"]},
-{rarity:"Необычный",chance:25,rewards:["Дриблинг","Цепь"]},
-{rarity:"Редкий",chance:10,rewards:["Поток Змеи","Поток Хамелеона"]},
-{rarity:"Эпик",chance:5,rewards:["Поток Пантеры"]},
-{rarity:"Легендарный",chance:2.5,rewards:["Поток Гения","Поток Императора"]},
-{rarity:"Мировой класс",chance:1,rewards:["Божественная скорость","Поток Цантора"]}
-];
-
-const luckyTable=[
-{rarity:"Эпик",chance:65,rewards:["Поток Пантеры"]},
-{rarity:"Легендарный",chance:25,rewards:["Поток Гения","Поток Императора"]},
-{rarity:"Мировой класс",chance:10,rewards:["Божественная скорость","Поток Цантора"]}
-];
-
-function startGacha(){
-intro.style.display="none";
-gacha.style.display="flex";
-updateSpins();
+/* ПРОВЕРКА WEBGL */
+if(!WEBGL.isWebGLAvailable){
+alert("WebGL не поддерживается");
 }
 
-function updateSpins(){
-spins.innerText="Обычные:"+normalSpins+" | Удачливые:"+luckySpins;
-}
+/* СЦЕНА */
+let scene = new THREE.Scene();
+scene.background = new THREE.Color(0x87ceeb);
 
-function rollNormal(){if(normalSpins<=0)return;normalSpins--;roll(normalTable);}
-function rollLucky(){if(luckySpins<=0)return;luckySpins--;roll(luckyTable);}
+let camera = new THREE.PerspectiveCamera(75,window.innerWidth/window.innerHeight,0.1,1000);
+camera.position.set(0,5,10);
 
-function roll(table){
-let rand=Math.random()*100,sum=0;
-for(let item of table){
-sum+=item.chance;
-if(rand<=sum){
-awakening=item.rewards[Math.floor(Math.random()*item.rewards.length)];
-result.innerText=item.rarity+" — "+awakening;
-continueBtn.style.display="block";
-break;
-}}
-updateSpins();
-}
-
-/* ---------------- 3D ---------------- */
-
-let scene,camera,renderer;
-let player,ball,goal;
-let keys={},hasBall=false;
-let velocityY=0,onGround=true;
-let moveX=0,moveZ=0;
-
-function startGame(){
-
-gacha.style.display="none";
-ui.style.display="block";
-
-/* СОЗДАЁМ РЕНДЕР ОДИН РАЗ */
-renderer=new THREE.WebGLRenderer({antialias:true});
+let renderer = new THREE.WebGLRenderer({antialias:true});
 renderer.setSize(window.innerWidth,window.innerHeight);
-renderer.shadowMap.enabled=true;
 document.body.appendChild(renderer.domElement);
 
-scene=new THREE.Scene();
-scene.background=new THREE.Color(0x87CEEB);
+/* СВЕТ */
+scene.add(new THREE.AmbientLight(0xffffff,0.8));
 
-camera=new THREE.PerspectiveCamera(75,window.innerWidth/window.innerHeight,0.1,1000);
-camera.position.set(0,6,12);
-
-/* Свет */
-const sun=new THREE.DirectionalLight(0xffffff,1.5);
-sun.position.set(100,200,100);
-sun.castShadow=true;
-scene.add(sun);
-scene.add(new THREE.AmbientLight(0xffffff,0.5));
-
-/* Поле */
-const field=new THREE.Mesh(
-new THREE.PlaneGeometry(300,200),
-new THREE.MeshStandardMaterial({color:0x1e7b1e})
+/* ПОЛЕ */
+let field = new THREE.Mesh(
+new THREE.PlaneGeometry(200,200),
+new THREE.MeshBasicMaterial({color:0x1e7b1e})
 );
-field.rotation.x=-Math.PI/2;
-field.receiveShadow=true;
+field.rotation.x = -Math.PI/2;
 scene.add(field);
 
-/* Стадион */
-const stadium=new THREE.Mesh(
-new THREE.CylinderGeometry(160,160,40,64,1,true),
-new THREE.MeshStandardMaterial({color:0x222222,side:THREE.DoubleSide})
+/* СТАДИОН (лёгкий) */
+let stadium = new THREE.Mesh(
+new THREE.CylinderGeometry(120,120,30,32,1,true),
+new THREE.MeshBasicMaterial({color:0x333333,side:THREE.DoubleSide})
 );
-stadium.position.y=20;
+stadium.position.y=15;
 scene.add(stadium);
 
-/* Игрок */
-player=new THREE.Mesh(
-new THREE.CapsuleGeometry(0.5,1.5,8,16),
-new THREE.MeshStandardMaterial({color:0x00aaff})
+/* ИГРОК (Box вместо Capsule) */
+let player = new THREE.Mesh(
+new THREE.BoxGeometry(1,2,1),
+new THREE.MeshBasicMaterial({color:0x00aaff})
 );
 player.position.y=1;
-player.castShadow=true;
 scene.add(player);
 
-/* Мяч */
-ball=new THREE.Mesh(
-new THREE.SphereGeometry(0.5,32,32),
-new THREE.MeshStandardMaterial({color:0xffffff})
+/* МЯЧ */
+let ball = new THREE.Mesh(
+new THREE.SphereGeometry(0.5,16,16),
+new THREE.MeshBasicMaterial({color:0xffffff})
 );
 ball.position.set(0,0.5,-10);
-ball.castShadow=true;
 scene.add(ball);
 
-/* Ворота */
-goal=new THREE.Mesh(
-new THREE.BoxGeometry(10,5,1),
-new THREE.MeshStandardMaterial({color:0xffffff})
-);
-goal.position.set(0,2.5,-80);
-scene.add(goal);
+/* ДВИЖЕНИЕ */
+let moveX=0,moveZ=0;
+let velocityY=0,onGround=true;
+let hasBall=false;
 
-window.addEventListener("resize",()=>{
-camera.aspect=window.innerWidth/window.innerHeight;
-camera.updateProjectionMatrix();
-renderer.setSize(window.innerWidth,window.innerHeight);
-});
-
-document.addEventListener("keydown",e=>keys[e.key]=true);
-document.addEventListener("keyup",e=>keys[e.key]=false);
-
-animate();
-}
-
-/* -------- JOYSTICK -------- */
-
+/* ДЖОЙСТИК */
+let joystick=document.getElementById("joystick");
+let stick=document.getElementById("stick");
 let drag=false;
-joystick.addEventListener("touchstart",()=>drag=true);
-joystick.addEventListener("touchend",()=>{
-drag=false;moveX=0;moveZ=0;
-stick.style.left="30px";stick.style.top="30px";
-});
-joystick.addEventListener("touchmove",(e)=>{
+
+joystick.ontouchstart=()=>drag=true;
+joystick.ontouchend=()=>{
+drag=false;
+moveX=0;moveZ=0;
+stick.style.left="30px";
+stick.style.top="30px";
+};
+
+joystick.ontouchmove=(e)=>{
 if(!drag)return;
 let r=joystick.getBoundingClientRect();
 let x=e.touches[0].clientX-r.left-60;
 let y=e.touches[0].clientY-r.top-60;
-let d=Math.sqrt(x*x+y*y);
 let max=40;
+let d=Math.sqrt(x*x+y*y);
 if(d>max){x=x/d*max;y=y/d*max;}
 stick.style.left=(x+30)+"px";
 stick.style.top=(y+30)+"px";
-moveX=x/40;moveZ=y/40;
-});
+moveX=x/40;
+moveZ=y/40;
+};
 
-jumpBtn.onclick=()=>{if(onGround){velocityY=0.3;onGround=false;}};
+/* ПРЫЖОК */
+jumpBtn.onclick=()=>{
+if(onGround){velocityY=0.25;onGround=false;}
+};
 
-/* -------- LOOP -------- */
-
+/* LOOP */
 function animate(){
 requestAnimationFrame(animate);
 
-if(!scene) return;
-
-/* ПК */
-if(keys["w"])moveZ=-1;
-if(keys["s"])moveZ=1;
-if(keys["a"])moveX=-1;
-if(keys["d"])moveX=1;
-
-/* Движение */
+/* движение */
 player.position.x+=moveX*0.4;
 player.position.z+=moveZ*0.4;
-moveX*=0.8;moveZ*=0.8;
 
-/* Гравитация */
+/* гравитация */
 player.position.y+=velocityY;
 velocityY-=0.015;
-if(player.position.y<=1){player.position.y=1;velocityY=0;onGround=true;}
+if(player.position.y<=1){
+player.position.y=1;
+velocityY=0;
+onGround=true;
+}
 
-/* Камера */
-camera.position.x=player.position.x;
-camera.position.z=player.position.z+12;
-camera.lookAt(player.position);
-
-/* Взятие мяча */
-if(player.position.distanceTo(ball.position)<2){hasBall=true;}
+/* мяч берётся */
+if(player.position.distanceTo(ball.position)<2){
+hasBall=true;
+}
 if(hasBall){
 ball.position.x=player.position.x;
 ball.position.z=player.position.z-1;
 }
 
-/* Удар */
-if(keys["f"]&&hasBall){
-hasBall=false;
-ball.position.z-=8;
-}
-
-/* Гол */
-if(ball.position.z<-75){
-alert("⚽ ГОЛ!");
-ball.position.set(0,0.5,-10);
-hasBall=false;
-}
+/* камера */
+camera.position.x=player.position.x;
+camera.position.z=player.position.z+10;
+camera.lookAt(player.position);
 
 renderer.render(scene,camera);
 }
+
+animate();
+
+/* RESIZE */
+window.onresize=()=>{
+camera.aspect=window.innerWidth/window.innerHeight;
+camera.updateProjectionMatrix();
+renderer.setSize(window.innerWidth,window.innerHeight);
+};
+
 </script>
 </body>
 </html>

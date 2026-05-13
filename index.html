@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Blue Lock: Пробуждение</title>
+<style>
+body{
+    margin:0;
+    background:black;
+    color:white;
+    font-family:Arial;
+    overflow:hidden;
+}
+
+.screen{
+    position:absolute;
+    width:100%;
+    height:100%;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    align-items:center;
+    text-align:center;
+}
+
+button{
+    padding:12px 25px;
+    margin:10px;
+    font-size:18px;
+    cursor:pointer;
+    background:#111;
+    color:white;
+    border:2px solid white;
+}
+
+button:hover{
+    background:white;
+    color:black;
+}
+
+#result{
+    margin-top:20px;
+    font-size:24px;
+    font-weight:bold;
+}
+
+.common{color:lightgray;}
+.uncommon{color:lime;}
+.rare{color:deepskyblue;}
+.epic{color:violet;}
+.legendary{color:gold;}
+.world{color:red; text-shadow:0 0 20px red;}
+</style>
+</head>
+<body>
+
+<!-- ВСТУПЛЕНИЕ -->
+<div id="intro" class="screen">
+    <h1>Ты вошёл в Blue Lock</h1>
+    <p>Здесь нет команды. Есть только эго.</p>
+    <p>У тебя один шанс.</p>
+    <button onclick="startGacha()">Пробудиться</button>
+</div>
+
+<!-- GACHA -->
+<div id="gacha" class="screen" style="display:none;">
+    <h1>Пробуждение</h1>
+    <p id="spinInfo"></p>
+    <button onclick="rollNormal()">Обычный спин</button>
+    <button onclick="rollLucky()">🌟 Удачливый спин</button>
+    <div id="result"></div>
+</div>
+
+<script>
+
+let normalSpins = 10;
+let luckySpins = 1;
+
+const gachaTable = [
+{rarity:"Обычный", chance:50, class:"common",
+ rewards:["Подражатель","Нет","Скорость"]},
+
+{rarity:"Необычный", chance:25, class:"uncommon",
+ rewards:["Дриблинг","Цепь"]},
+
+{rarity:"Редкий", chance:10, class:"rare",
+ rewards:["Поток Змеи","Поток Хамелеона"]},
+
+{rarity:"Эпик", chance:5, class:"epic",
+ rewards:["Поток Пантеры"]},
+
+{rarity:"Легендарный", chance:2.5, class:"legendary",
+ rewards:["Поток Гения","Поток Императора","Поток Пазлов","Поток Младшего"]},
+
+{rarity:"Мировой класс", chance:1, class:"world",
+ rewards:["Божественная скорость","Поток Цантора"]}
+];
+
+function startGacha(){
+    document.getElementById("intro").style.display="none";
+    document.getElementById("gacha").style.display="flex";
+    updateInfo();
+}
+
+function updateInfo(){
+    document.getElementById("spinInfo").innerText =
+    "Обычные спины: "+normalSpins+" | Удачливые спины: "+luckySpins;
+}
+
+function rollNormal(){
+    if(normalSpins<=0){
+        alert("Нет обычных спинов!");
+        return;
+    }
+    normalSpins--;
+    roll(gachaTable);
+}
+
+function rollLucky(){
+    if(luckySpins<=0){
+        alert("Нет удачливых спинов!");
+        return;
+    }
+    luckySpins--;
+
+    let luckyTable = gachaTable.map(item=>{
+        return{
+            ...item,
+            chance: item.rarity==="Обычный" ? 35 : item.chance*2
+        }
+    });
+
+    roll(luckyTable);
+}
+
+function roll(table){
+
+    let rand = Math.random()*100;
+    let sum = 0;
+
+    for(let item of table){
+        sum += item.chance;
+        if(rand <= sum){
+
+            let reward = item.rewards[
+                Math.floor(Math.random()*item.rewards.length)
+            ];
+
+            showResult(item, reward);
+
+            if(item.rarity==="Мировой класс"){
+                document.body.style.background="darkred";
+            }
+
+            localStorage.setItem("awakening", reward);
+            break;
+        }
+    }
+
+    updateInfo();
+}
+
+function showResult(item, reward){
+    let result = document.getElementById("result");
+    result.className = item.class;
+    result.innerText = "🔥 "+item.rarity+" — "+reward;
+}
+
+</script>
+
+</body>
+</html>

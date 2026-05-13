@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<body>
+<script>
+var canvas = document.createElement("canvas");
+var gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
+
+if (gl) {
+    document.body.style.background = "green";
+    document.body.innerHTML = "<h1>WebGL работает ✅</h1>";
+} else {
+    document.body.style.background = "black";
+    document.body.innerHTML = "<h1>WebGL НЕ работает ❌</h1>";
+}
+</script>
+</body>
+</html>

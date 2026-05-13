@@ -2,14 +2,15 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<title>Blue Lock Ultimate</title>
+<title>Blue Lock Fixed</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
 body{margin:0;overflow:hidden;background:black;font-family:Arial;color:white}
+canvas{display:block}
 
 /* ЭКРАНЫ */
 .screen{
-position:absolute;
+position:fixed;
 width:100%;
 height:100%;
 display:flex;
@@ -17,7 +18,7 @@ flex-direction:column;
 justify-content:center;
 align-items:center;
 background:black;
-z-index:10;
+z-index:20;
 text-align:center;
 }
 
@@ -28,15 +29,22 @@ font-size:18px;
 cursor:pointer;
 }
 
-/* UI MOBILE */
-#ui{position:absolute;width:100%;height:100%;pointer-events:none;display:none;}
+/* UI */
+#ui{
+position:fixed;
+width:100%;
+height:100%;
+pointer-events:none;
+display:none;
+z-index:15;
+}
 
 #joystick{
 position:absolute;
 bottom:40px;
 left:40px;
 width:120px;height:120px;
-background:rgba(255,255,255,0.1);
+background:rgba(255,255,255,0.15);
 border-radius:50%;
 pointer-events:auto;
 touch-action:none;
@@ -54,7 +62,7 @@ position:absolute;
 bottom:60px;right:60px;
 width:100px;height:100px;
 border-radius:50%;
-background:rgba(0,150,255,0.7);
+background:rgba(0,150,255,0.8);
 color:white;font-size:18px;
 border:none;
 pointer-events:auto;
@@ -63,7 +71,7 @@ pointer-events:auto;
 </head>
 <body>
 
-<!-- ЗАСТАВКА -->
+<!-- INTRO -->
 <div id="intro" class="screen">
 <h1>BLUE LOCK</h1>
 <p>У тебя один шанс.</p>
@@ -77,7 +85,7 @@ pointer-events:auto;
 <button onclick="rollNormal()">Обычный спин</button>
 <button onclick="rollLucky()">Удачливый спин</button>
 <h3 id="result"></h3>
-<button id="continueBtn" onclick="startGame()" style="display:none;">Продолжить</button>
+<button id="continueBtn" style="display:none;" onclick="startGame()">Продолжить</button>
 </div>
 
 <!-- UI -->
@@ -91,9 +99,7 @@ pointer-events:auto;
 <script>
 /* ---------------- GACHA ---------------- */
 
-let normalSpins=10;
-let luckySpins=1;
-let awakening=null;
+let normalSpins=10,luckySpins=1,awakening=null;
 
 const normalTable=[
 {rarity:"Обычный",chance:50,rewards:["Подражатель","Скорость"]},
@@ -117,7 +123,7 @@ updateSpins();
 }
 
 function updateSpins(){
-spins.innerText="Обычные: "+normalSpins+" | Удачливые: "+luckySpins;
+spins.innerText="Обычные:"+normalSpins+" | Удачливые:"+luckySpins;
 }
 
 function rollNormal(){if(normalSpins<=0)return;normalSpins--;roll(normalTable);}
@@ -136,7 +142,7 @@ break;
 updateSpins();
 }
 
-/* ---------------- 3D GAME ---------------- */
+/* ---------------- 3D ---------------- */
 
 let scene,camera,renderer;
 let player,ball,goal;
@@ -149,28 +155,24 @@ function startGame(){
 gacha.style.display="none";
 ui.style.display="block";
 
-/* FIX ЧЕРНОГО ЭКРАНА */
-if(renderer){
-renderer.dispose();
-document.body.removeChild(renderer.domElement);
-}
+/* СОЗДАЁМ РЕНДЕР ОДИН РАЗ */
+renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(window.innerWidth,window.innerHeight);
+renderer.shadowMap.enabled=true;
+document.body.appendChild(renderer.domElement);
 
 scene=new THREE.Scene();
 scene.background=new THREE.Color(0x87CEEB);
 
-camera=new THREE.PerspectiveCamera(75,innerWidth/innerHeight,0.1,1000);
-
-renderer=new THREE.WebGLRenderer({antialias:true});
-renderer.setSize(innerWidth,innerHeight);
-renderer.shadowMap.enabled=true;
-document.body.appendChild(renderer.domElement);
+camera=new THREE.PerspectiveCamera(75,window.innerWidth/window.innerHeight,0.1,1000);
+camera.position.set(0,6,12);
 
 /* Свет */
 const sun=new THREE.DirectionalLight(0xffffff,1.5);
 sun.position.set(100,200,100);
 sun.castShadow=true;
 scene.add(sun);
-scene.add(new THREE.AmbientLight(0xffffff,0.4));
+scene.add(new THREE.AmbientLight(0xffffff,0.5));
 
 /* Поле */
 const field=new THREE.Mesh(
@@ -215,7 +217,11 @@ new THREE.MeshStandardMaterial({color:0xffffff})
 goal.position.set(0,2.5,-80);
 scene.add(goal);
 
-camera.position.set(0,6,12);
+window.addEventListener("resize",()=>{
+camera.aspect=window.innerWidth/window.innerHeight;
+camera.updateProjectionMatrix();
+renderer.setSize(window.innerWidth,window.innerHeight);
+});
 
 document.addEventListener("keydown",e=>keys[e.key]=true);
 document.addEventListener("keyup",e=>keys[e.key]=false);
@@ -223,16 +229,14 @@ document.addEventListener("keyup",e=>keys[e.key]=false);
 animate();
 }
 
-/* ----------- JOYSTICK ----------- */
+/* -------- JOYSTICK -------- */
 
 let drag=false;
-
 joystick.addEventListener("touchstart",()=>drag=true);
 joystick.addEventListener("touchend",()=>{
 drag=false;moveX=0;moveZ=0;
 stick.style.left="30px";stick.style.top="30px";
 });
-
 joystick.addEventListener("touchmove",(e)=>{
 if(!drag)return;
 let r=joystick.getBoundingClientRect();
@@ -246,14 +250,14 @@ stick.style.top=(y+30)+"px";
 moveX=x/40;moveZ=y/40;
 });
 
-jumpBtn.onclick=()=>{
-if(onGround){velocityY=0.3;onGround=false;}
-};
+jumpBtn.onclick=()=>{if(onGround){velocityY=0.3;onGround=false;}};
 
-/* ----------- LOOP ----------- */
+/* -------- LOOP -------- */
 
 function animate(){
 requestAnimationFrame(animate);
+
+if(!scene) return;
 
 /* ПК */
 if(keys["w"])moveZ=-1;
